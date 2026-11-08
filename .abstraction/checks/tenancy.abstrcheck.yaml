@@ -1,0 +1,17 @@
+version: 1
+checks:
+  - name: workspace-routes-check-membership
+    filters:
+      paths: ["server/src/**"]
+      file_types: [ts]
+    steps:
+      - aql:
+          name: route-handlers-call-requireWorkspace
+          comment: Every workspace route handler checks that the caller is a member of the workspace before it touches workspace data. Only the sign-in and session routes in authRoutes.ts run without a workspace.
+          query: |
+            let handlers = functions().filterInFileWithName("src/routes/*").filterName("*Handler")
+            let authRoutes = functions().filterInFileWithName("src/routes/authRoutes.ts")
+            let requireWorkspace = functions().filterInFileWithName("src/auth/session.ts").filterNameExact("requireWorkspace")
+            assertNotEmpty(handlers)
+            assertNotEmpty(requireWorkspace)
+            duringCallsTo(handlers).exempt(authRoutes).assertCalls(requireWorkspace)

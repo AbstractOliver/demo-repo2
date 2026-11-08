@@ -1,0 +1,18 @@
+version: 1
+checks:
+  - name: no-external-calls-in-transactions
+    filters:
+      paths: ["server/src/**"]
+      file_types: [ts]
+    steps:
+      - aql:
+          name: integrations-run-outside-transactions
+          comment: Emails and payment-provider calls run after the database client is released, never while it holds a pool connection and row locks.
+          query: |
+            let connect = functions().filterInFileWithName("src/db/pool.ts").filterNameExact("connect")
+            let release = functions().filterInFileWithName("src/db/pool.ts").filterScopedName("DbClient.release")
+            let external = functions().filterInFileWithName("src/integrations/*")
+            assertNotEmpty(connect)
+            assertNotEmpty(release)
+            assertNotEmpty(external)
+            afterCallTo(connect).untilCallTo(release).assertNeverCalls(external)
