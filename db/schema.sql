@@ -62,3 +62,13 @@ create table invoices (
 );
 
 create index invoices_workspace_status on invoices (workspace_id, status);
+
+create table payments (
+  id text primary key,
+  workspace_id text not null references workspaces (id) on delete cascade,
+  invoice_id text not null references invoices (id),
+  amount_cents integer not null,
+  currency text not null,
+  provider_charge_id text not null unique,
+  created_at timestamptz not null default now()
+);

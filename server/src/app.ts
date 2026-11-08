@@ -1,11 +1,12 @@
 import express from 'express'
 import { handleErrors } from './http/errors'
-import { meHandler, signInHandler } from './routes/authRoutes'
+import { acceptInviteHandler, meHandler, signInHandler } from './routes/authRoutes'
 import { createCustomerHandler, listCustomersHandler } from './routes/customerRoutes'
 import {
   createInvoiceHandler,
   getInvoiceHandler,
   listInvoicesHandler,
+  payInvoiceHandler,
   sendInvoiceHandler,
 } from './routes/invoiceRoutes'
 import { inviteMemberHandler, listMembersHandler, removeMemberHandler } from './routes/memberRoutes'
@@ -20,6 +21,7 @@ export function createApp() {
   })
   app.post('/api/sign-in', signInHandler)
   app.get('/api/me', meHandler)
+  app.post('/api/invites/:token/accept', acceptInviteHandler)
 
   app.get('/api/workspaces/:workspaceId', getWorkspaceHandler)
   app.get('/api/workspaces/:workspaceId/customers', listCustomersHandler)
@@ -28,6 +30,7 @@ export function createApp() {
   app.post('/api/workspaces/:workspaceId/invoices', createInvoiceHandler)
   app.get('/api/workspaces/:workspaceId/invoices/:invoiceId', getInvoiceHandler)
   app.post('/api/workspaces/:workspaceId/invoices/:invoiceId/send', sendInvoiceHandler)
+  app.post('/api/workspaces/:workspaceId/invoices/:invoiceId/pay', payInvoiceHandler)
   app.get('/api/workspaces/:workspaceId/members', listMembersHandler)
   app.post('/api/workspaces/:workspaceId/invites', inviteMemberHandler)
   app.delete('/api/workspaces/:workspaceId/members/:userId', removeMemberHandler)

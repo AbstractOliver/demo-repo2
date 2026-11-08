@@ -2,6 +2,9 @@ import type { Request, Response } from 'express'
 import { z } from 'zod'
 import { requireWorkspace } from '../auth/session'
 import { createInvoice, getInvoice, isOverdue, listInvoices, sendInvoice } from '../services/invoices'
+import { payInvoice } from '../services/payments'
+
+const payBody = z.object({ paymentMethodId: z.string().min(1) })
 
 const listQuery = z.object({ status: z.enum(['draft', 'open', 'paid', 'void']).optional() })
 
@@ -35,4 +38,11 @@ export async function sendInvoiceHandler(req: Request, res: Response) {
   const ctx = await requireWorkspace(req, 'admin')
   const invoice = await sendInvoice(ctx.workspaceId, String(req.params.invoiceId))
   res.json(invoice)
+}
+
+export async function payInvoiceHandler(req: Request, res: Response) {
+  const ctx = await requireWorkspace(req)
+  const { paymentMethodId } = payBody.parse(req.body)
+  const invoice = await payInvoice(ctx.workspaceId, String(req.params.invoiceId), paymentMethodId)
+  res.json({ ...invoice, overdue: isOverdue(invoice) })
 }
