@@ -1,19 +1,15 @@
 import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router'
+import { useParams } from 'react-router'
 import { api } from '../api'
-import { useSession } from '../session'
 
 export function AcceptInvitePage() {
   const { token } = useParams()
-  const navigate = useNavigate()
-  const { refresh } = useSession()
   const [error, setError] = useState<string | null>(null)
 
   async function accept() {
     try {
       const { workspaceId } = await api<{ workspaceId: string }>(`/invites/${token}/accept`, { method: 'POST' })
-      await refresh()
-      navigate(`/w/${workspaceId}/invoices`)
+      window.location.assign(`/w/${workspaceId}/invoices`)
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     }

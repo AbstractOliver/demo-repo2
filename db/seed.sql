@@ -14,10 +14,10 @@ insert into members (workspace_id, user_id, role) values
   ('ws_studio', 'usr_lena', 'member'),
   ('ws_bakery', 'usr_sam', 'owner');
 
-insert into customers (id, workspace_id, name, email) values
-  ('cus_fjord', 'ws_studio', 'Fjord Outdoor', 'billing@fjord.test'),
-  ('cus_pine', 'ws_studio', 'Pine & Co', 'accounts@pine.test'),
-  ('cus_cafe', 'ws_bakery', 'Harbour Cafe', 'owner@harbour.test');
+insert into customers (id, workspace_id, name, email, card_payment_method_id, card_last4) values
+  ('cus_fjord', 'ws_studio', 'Fjord Outdoor', 'billing@fjord.test', 'pm_card_visa', '4242'),
+  ('cus_pine', 'ws_studio', 'Pine & Co', 'accounts@pine.test', 'pm_card_mastercard', '4444'),
+  ('cus_cafe', 'ws_bakery', 'Harbour Cafe', 'owner@harbour.test', null, null);
 
 insert into invoices (id, workspace_id, customer_id, number, amount_cents, currency, status, due_date) values
   ('inv_1001', 'ws_studio', 'cus_fjord', 'NS-0001', 240000, 'EUR', 'paid', current_date - 40),

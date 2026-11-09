@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { api, type Invoice } from '../api'
 import { Money } from '../components/Money'
@@ -9,15 +9,13 @@ export function InvoicePage() {
   const { workspaceId, invoiceId } = useParams()
   const path = `/workspaces/${workspaceId}/invoices/${invoiceId}`
   const { data: invoice, error, reload } = useApi<Invoice>(path)
-  const [paymentMethodId, setPaymentMethodId] = useState('pm_card_visa')
   const [paying, setPaying] = useState(false)
   const [payError, setPayError] = useState<string | null>(null)
 
-  async function pay(event: FormEvent) {
-    event.preventDefault()
+  async function pay() {
     setPaying(true)
     try {
-      await api(`${path}/pay`, { method: 'POST', body: { paymentMethodId } })
+      await api(`${path}/pay`, { method: 'POST' })
       setPayError(null)
       await reload()
     } catch (err) {
@@ -60,14 +58,20 @@ export function InvoicePage() {
         </div>
       </section>
       {invoice.status === 'open' && (
-        <form className="card pay-form" onSubmit={pay}>
+        <section className="card pay-form">
           <h2>Pay by card</h2>
-          <input value={paymentMethodId} onChange={(event) => setPaymentMethodId(event.target.value)} />
-          {payError && <p className="error">{payError}</p>}
-          <button type="submit" disabled={paying}>
-            {paying ? 'Paying…' : 'Pay now'}
-          </button>
-        </form>
+          {invoice.cardLast4 ? (
+            <>
+              <p className="muted">Charges {invoice.customerName}'s card on file.</p>
+              {payError && <p className="error">{payError}</p>}
+              <button onClick={pay} disabled={paying}>
+                {paying ? 'Charging…' : `Charge card •••• ${invoice.cardLast4}`}
+              </button>
+            </>
+          ) : (
+            <p className="muted">{invoice.customerName} has no card on file.</p>
+          )}
+        </section>
       )}
     </>
   )

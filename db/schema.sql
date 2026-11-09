@@ -45,6 +45,8 @@ create table customers (
   workspace_id text not null references workspaces (id) on delete cascade,
   name text not null,
   email text not null,
+  card_payment_method_id text,
+  card_last4 text,
   created_at timestamptz not null default now()
 );
 

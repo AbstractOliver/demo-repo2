@@ -4,8 +4,6 @@ import { requireWorkspace } from '../auth/session'
 import { createInvoice, getInvoice, isOverdue, listInvoices, sendInvoice } from '../services/invoices'
 import { payInvoice } from '../services/payments'
 
-const payBody = z.object({ paymentMethodId: z.string().min(1) })
-
 const listQuery = z.object({ status: z.enum(['draft', 'open', 'paid', 'void']).optional() })
 
 const newInvoiceBody = z.object({
@@ -42,7 +40,6 @@ export async function sendInvoiceHandler(req: Request, res: Response) {
 
 export async function payInvoiceHandler(req: Request, res: Response) {
   const ctx = await requireWorkspace(req)
-  const { paymentMethodId } = payBody.parse(req.body)
-  const invoice = await payInvoice(ctx.workspaceId, String(req.params.invoiceId), paymentMethodId)
+  const invoice = await payInvoice(ctx.workspaceId, String(req.params.invoiceId))
   res.json({ ...invoice, overdue: isOverdue(invoice) })
 }

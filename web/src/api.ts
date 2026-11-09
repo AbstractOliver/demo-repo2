@@ -19,6 +19,7 @@ export type Invoice = {
   id: string
   customerId: string
   customerName: string
+  cardLast4: string | null
   number: string
   amountCents: number
   currency: string

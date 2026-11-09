@@ -1,10 +1,10 @@
-import { connect } from '../db/pool'
+import { connect, queryOne } from '../db/pool'
 import { HttpError } from '../http/errors'
 import { newId } from '../ids'
 import { chargeCard, type Charge } from '../integrations/payments'
 import { getInvoice, type Invoice } from './invoices'
 
-export async function payInvoice(workspaceId: string, invoiceId: string, paymentMethodId: string): Promise<Invoice> {
+export async function payInvoice(workspaceId: string, invoiceId: string): Promise<Invoice> {
   const invoice = await getInvoice(workspaceId, invoiceId)
   if (invoice.status === 'paid') {
     return invoice
@@ -12,11 +12,18 @@ export async function payInvoice(workspaceId: string, invoiceId: string, payment
   if (invoice.status !== 'open') {
     throw new HttpError(409, 'Only open invoices can be paid')
   }
+  const card = await queryOne<{ paymentMethodId: string | null }>(
+    'select card_payment_method_id as "paymentMethodId" from customers where workspace_id = $1 and id = $2',
+    [workspaceId, invoice.customerId],
+  )
+  if (!card?.paymentMethodId) {
+    throw new HttpError(409, 'The customer has no card on file')
+  }
   const charge = await chargeCard({
     amountCents: invoice.amountCents,
     currency: invoice.currency,
-    paymentMethodId,
-    idempotencyKey: `invoice-${invoice.id}`,
+    paymentMethodId: card.paymentMethodId,
+    idempotencyKey: `invoice-${invoice.id}-${card.paymentMethodId}`,
   })
   if (charge.status !== 'succeeded') {
     throw new HttpError(402, charge.failureMessage ?? 'The card was declined')
