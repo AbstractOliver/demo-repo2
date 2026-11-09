@@ -3,7 +3,7 @@ checks:
   - name: workspace-routes-check-membership
     filters:
       paths: ["server/src/**"]
-      file_types: [ts]
+      file_types: [typescript]
     steps:
       - aql:
           name: route-handlers-call-requireWorkspace
