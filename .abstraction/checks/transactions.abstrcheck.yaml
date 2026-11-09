@@ -3,7 +3,7 @@ checks:
   - name: no-external-calls-in-transactions
     filters:
       paths: ["server/src/**"]
-      file_types: [ts]
+      file_types: [typescript]
     steps:
       - aql:
           name: integrations-run-outside-transactions
