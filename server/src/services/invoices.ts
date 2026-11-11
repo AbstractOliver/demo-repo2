@@ -1,9 +1,10 @@
-import { config } from '../config'
 import { query, queryOne } from '../db/pool'
 import { withTransaction } from '../db/transaction'
 import { HttpError } from '../http/errors'
 import { newId } from '../ids'
-import { sendEmail } from '../integrations/email'
+import { emailInvoice } from './notifications'
+
+export { formatMoney } from './notifications'
 
 export type InvoiceStatus = 'draft' | 'open' | 'paid' | 'void'
 
@@ -24,6 +25,7 @@ export type NewInvoice = {
   amountCents: number
   currency: string
   dueDate: string
+  sendNow?: boolean
 }
 
 const INVOICE_SELECT = `
@@ -55,10 +57,10 @@ export async function getInvoice(workspaceId: string, invoiceId: string): Promis
 
 export async function createInvoice(workspaceId: string, input: NewInvoice): Promise<Invoice> {
   const invoiceId = await withTransaction(async (client) => {
-    const [customer] = await client.query('select id from customers where workspace_id = $1 and id = $2', [
-      workspaceId,
-      input.customerId,
-    ])
+    const [customer] = await client.query<{ id: string; email: string }>(
+      'select id, email from customers where workspace_id = $1 and id = $2',
+      [workspaceId, input.customerId],
+    )
     if (!customer) {
       throw new HttpError(400, 'Unknown customer')
     }
@@ -68,19 +70,32 @@ export async function createInvoice(workspaceId: string, input: NewInvoice): Pro
       [workspaceId],
     )
     const id = newId('inv')
+    const number = `${counter!.prefix}-${String(counter!.value).padStart(4, '0')}`
     await client.query(
-      `insert into invoices (id, workspace_id, customer_id, number, amount_cents, currency, due_date)
-       values ($1, $2, $3, $4, $5, $6, $7)`,
+      `insert into invoices (id, workspace_id, customer_id, number, amount_cents, currency, due_date, status)
+       values ($1, $2, $3, $4, $5, $6, $7, $8)`,
       [
         id,
         workspaceId,
         input.customerId,
-        `${counter!.prefix}-${String(counter!.value).padStart(4, '0')}`,
+        number,
         input.amountCents,
         input.currency,
         input.dueDate,
+        input.sendNow ? 'open' : 'draft',
       ],
     )
+    if (input.sendNow) {
+      // Send in the same transaction, so a failed send leaves no open invoice behind.
+      await emailInvoice({
+        to: customer.email,
+        invoiceId: id,
+        number,
+        amountCents: input.amountCents,
+        currency: input.currency,
+        dueDate: input.dueDate,
+      })
+    }
     return id
   })
   return getInvoice(workspaceId, invoiceId)
@@ -96,18 +111,17 @@ export async function sendInvoice(workspaceId: string, invoiceId: string): Promi
   }
   const invoice = await getInvoice(workspaceId, invoiceId)
   const customer = await queryOne<{ email: string }>('select email from customers where id = $1', [invoice.customerId])
-  await sendEmail({
+  await emailInvoice({
     to: customer!.email,
-    subject: `Invoice ${invoice.number}`,
-    text: `You have a new invoice of ${formatMoney(invoice.amountCents, invoice.currency)}, due ${invoice.dueDate}. View it here: ${config.appUrl}/pay/${invoice.id}`,
+    invoiceId: invoice.id,
+    number: invoice.number,
+    amountCents: invoice.amountCents,
+    currency: invoice.currency,
+    dueDate: invoice.dueDate,
   })
   return invoice
 }
 
 export function isOverdue(invoice: Invoice, today = new Date()): boolean {
   return invoice.status === 'open' && invoice.dueDate < today.toISOString().slice(0, 10)
-}
-
-export function formatMoney(amountCents: number, currency: string): string {
-  return new Intl.NumberFormat('en-IE', { style: 'currency', currency }).format(amountCents / 100)
 }

@@ -10,6 +10,7 @@ const newInvoiceBody = z.object({
   amountCents: z.number().int().positive(),
   currency: z.enum(['EUR', 'SEK', 'USD']).default('EUR'),
   dueDate: z.string().date(),
+  sendNow: z.boolean().default(false),
 })
 
 export async function listInvoicesHandler(req: Request, res: Response) {
