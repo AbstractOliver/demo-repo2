@@ -1,0 +1,31 @@
+version: 1
+checks:
+  - name: zz-probe-edges
+    filters:
+      paths: ["server/src/**"]
+      file_types: [typescript]
+    steps:
+      - aql:
+          name: handler-callers
+          query: |
+            assertEmpty(functions().filterInFileWithName("src/routes/*").filterName("*Handler").callers())
+      - aql:
+          name: catchers
+          query: |
+            assertEmpty(functions().filterInPackageWithName("server").exceptionHandlers())
+      - aql:
+          name: log-callers
+          query: |
+            assertEmpty(functions().filterInFileWithName("src/log.ts").callers())
+      - aql:
+          name: tagged
+          query: |
+            assertEmpty(variables().filterInPackage(packages().filterName("server")).filterTag(Tag.Name, Tag.Email, Tag.Phone, Tag.PhysicalAddress, Tag.AuthToken, Tag.Password))
+      - aql:
+          name: endpoint-file-callees
+          query: |
+            assertEmpty(functions().filterInFileWithName("src/http/endpoint.ts").callees())
+      - aql:
+          name: createApp-callees
+          query: |
+            assertEmpty(functions().filterNameExact("createApp").callees())

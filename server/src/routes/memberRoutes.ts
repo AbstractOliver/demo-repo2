@@ -1,28 +1,29 @@
-import type { Request, Response } from 'express'
+import type { Request } from 'express'
 import { z } from 'zod'
 import { requireWorkspace } from '../auth/session'
+import type { Reply } from '../http/endpoint'
 import { getSeatUsage, inviteMember, listMembers, listPendingInvites, removeMember } from '../services/members'
 
 const inviteBody = z.object({ email: z.string().email(), role: z.enum(['admin', 'member']).default('member') })
 
-export async function listMembersHandler(req: Request, res: Response) {
+export async function listMembersHandler(req: Request): Promise<Reply> {
   const ctx = await requireWorkspace(req)
   const [members, invites, seats] = await Promise.all([
     listMembers(ctx.workspaceId),
     listPendingInvites(ctx.workspaceId),
     getSeatUsage(ctx.workspaceId),
   ])
-  res.json({ members, invites, seats })
+  return { body: { members, invites, seats } }
 }
 
-export async function inviteMemberHandler(req: Request, res: Response) {
+export async function inviteMemberHandler(req: Request): Promise<Reply> {
   const ctx = await requireWorkspace(req, 'admin')
   const { email, role } = inviteBody.parse(req.body)
-  res.status(201).json(await inviteMember(ctx, email, role))
+  return { status: 201, body: await inviteMember(ctx, email, role) }
 }
 
-export async function removeMemberHandler(req: Request, res: Response) {
+export async function removeMemberHandler(req: Request): Promise<Reply> {
   const ctx = await requireWorkspace(req, 'admin')
   await removeMember(ctx, String(req.params.userId))
-  res.status(204).end()
+  return { status: 204 }
 }

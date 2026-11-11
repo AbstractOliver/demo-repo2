@@ -1,0 +1,17 @@
+version: 1
+checks:
+  - name: no-stack-traces-in-responses
+    filters:
+      paths: ["server/src/**"]
+      file_types: [typescript]
+    steps:
+      - aql:
+          name: only-the-endpoint-boundary-catches
+          comment: Errors travel up to endpoint(), which shows a customer only what toErrorReply builds. Code that catches an error on the way could answer with its message or stack instead. withTransaction catches only to roll back, and rethrows.
+          query: |
+            let code = functions().filterInPackageWithName("server").setTestVisibility(TestVisibility.Exclude)
+            let boundary = functions().filterInFileWithName("src/http/endpoint.ts")
+            let transaction = functions().filterInFileWithName("src/db/transaction.ts").filterNameExact("withTransaction")
+            assertNotEmpty(code.exceptionHandlers().filterInFile(files().filterName("src/http/endpoint.ts")))
+            // Only the endpoint boundary catches errors on their way to a customer.
+            assertSubset(code.exceptionHandlers().filterNotIn(transaction), boundary)

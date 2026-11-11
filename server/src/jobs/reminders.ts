@@ -1,5 +1,6 @@
 import { query } from '../db/pool'
 import { sendEmail } from '../integrations/email'
+import { logError, logEvent } from '../log'
 import { formatMoney, isOverdue, listInvoices } from '../services/invoices'
 
 export async function sendOverdueReminders(today = new Date()): Promise<number> {
@@ -28,11 +29,11 @@ export async function sendOverdueReminders(today = new Date()): Promise<number> 
 if (import.meta.url === `file://${process.argv[1]}`) {
   sendOverdueReminders()
     .then((sent) => {
-      console.log(`Sent ${sent} reminders`)
+      logEvent('reminders_sent', { count: sent })
       process.exit(0)
     })
     .catch((err) => {
-      console.error(err)
+      logError('reminders_failed', err)
       process.exit(1)
     })
 }
