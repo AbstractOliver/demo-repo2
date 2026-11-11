@@ -7,7 +7,7 @@
     "start": "tsx src/index.ts",
     "reminders": "tsx src/jobs/reminders.ts",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test 'src/**/*.test.ts'"
+    "test": "tsx --test \"src/**/*.test.ts\""
   },
   "dependencies": {
     "express": "^5.1.0",
