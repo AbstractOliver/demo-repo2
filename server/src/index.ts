@@ -1,6 +1,7 @@
 import { createApp } from './app'
 import { config } from './config'
+import { logEvent } from './log'
 
 createApp().listen(config.port, () => {
-  console.log(`Acme Invoicing API on http://localhost:${config.port}`)
+  logEvent('server_started', { port: config.port })
 })

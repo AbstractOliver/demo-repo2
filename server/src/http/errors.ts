@@ -1,4 +1,3 @@
-import type { ErrorRequestHandler } from 'express'
 import { ZodError } from 'zod'
 
 export class HttpError extends Error {
@@ -10,15 +9,26 @@ export class HttpError extends Error {
   }
 }
 
-export const handleErrors: ErrorRequestHandler = (err, _req, res, _next) => {
+export type ErrorReply = {
+  status: number
+  body: { error: string; issues?: { path: string; message: string }[] }
+}
+
+// What a customer sees when a request fails: an HttpError's own message, or, for invalid input, which
+// fields failed and why. Any other error becomes a plain 500, so a stack trace or a database message
+// never reaches a response.
+export function toErrorReply(err: unknown): ErrorReply {
   if (err instanceof HttpError) {
-    res.status(err.status).json({ error: err.message })
-    return
+    return { status: err.status, body: { error: err.message } }
   }
   if (err instanceof ZodError) {
-    res.status(400).json({ error: 'Invalid request', issues: err.issues })
-    return
+    return {
+      status: 400,
+      body: {
+        error: 'Invalid request',
+        issues: err.issues.map((issue) => ({ path: issue.path.join('.'), message: issue.message })),
+      },
+    }
   }
-  console.error(err)
-  res.status(500).json({ error: 'Something went wrong' })
+  return { status: 500, body: { error: 'Something went wrong' } }
 }

@@ -1,0 +1,28 @@
+version: 1
+checks:
+  - name: no-personal-data-in-logs
+    filters:
+      paths: ["server/src/**"]
+      file_types: [typescript]
+    steps:
+      - aql:
+          name: code-with-personal-data-never-logs
+          comment: Log lines carry event names and ids. Code that holds a name, email, phone number, address or credential never writes one, however deep. Failures are logged at the endpoint boundary, by error name and code only.
+          query: |
+            let personal = variables().filterInPackage(packages().filterName("server")).filterTag(Tag.Name, Tag.Email, Tag.Phone, Tag.PhysicalAddress, Tag.AuthToken, Tag.Password)
+            let boundary = functions().filterInFileWithName("src/http/endpoint.ts")
+            let holders = functions().filterInPackageWithName("server").filterHasParam(personal).filterNotIn(boundary).setTestVisibility(TestVisibility.Exclude)
+            let log = functions().filterInFileWithName("src/log.ts")
+            assertNotEmpty(holders)
+            assertNotEmpty(log)
+            // Code that holds personal data never writes a log line.
+            duringCallsTo(holders).assertNeverCalls(log)
+      - aql:
+          name: few-places-write-logs
+          comment: Log lines are written by the endpoint boundary, the server's startup and the jobs' outcomes, each with ids and error codes only. A new place that logs is a change to this list, made in review.
+          query: |
+            let log = functions().filterInFileWithName("src/log.ts")
+            let allowed = functions().filterInFile(files().filterNameAny("src/http/endpoint.ts", "src/index.ts", "src/jobs/*"))
+            assertNotEmpty(log.callers())
+            // Only the endpoint boundary, startup and jobs write log lines.
+            assertSubset(log.callers().filterNotIn(log).setTestVisibility(TestVisibility.Exclude), allowed)

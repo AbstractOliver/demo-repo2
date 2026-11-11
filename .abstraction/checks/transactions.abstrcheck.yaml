@@ -7,12 +7,18 @@ checks:
     steps:
       - aql:
           name: integrations-run-outside-transactions
-          comment: Emails and payment-provider calls run after the database client is released, never while it holds a pool connection and row locks.
+          comment: Emails and payment-provider calls run after the transaction commits, never while it holds a database connection and row locks.
+          query: |
+            let transaction = functions().filterInFileWithName("src/db/transaction.ts").filterNameExact("withTransaction")
+            let outside = functions().filterInFileWithName("src/integrations/*")
+            assertNotEmpty(transaction)
+            assertNotEmpty(outside)
+            duringCallsTo(transaction).assertNeverCalls(outside)
+      - aql:
+          name: transactions-go-through-withTransaction
+          comment: Only withTransaction takes a connection from the pool, so every transaction commits or rolls back and releases its connection.
           query: |
             let connect = functions().filterInFileWithName("src/db/pool.ts").filterNameExact("connect")
-            let release = functions().filterInFileWithName("src/db/pool.ts").filterScopedName("DbClient.release")
-            let external = functions().filterInFileWithName("src/integrations/*")
-            assertNotEmpty(connect)
-            assertNotEmpty(release)
-            assertNotEmpty(external)
-            afterCallTo(connect).untilCallTo(release).assertNeverCalls(external)
+            let transaction = functions().filterInFileWithName("src/db/transaction.ts").filterNameExact("withTransaction")
+            assertNotEmpty(connect.callers())
+            assertSubset(connect.callers(), transaction)
