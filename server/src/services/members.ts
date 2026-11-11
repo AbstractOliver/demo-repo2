@@ -1,10 +1,11 @@
-import type { Role, WorkspaceContext } from '../auth/session'
+import type { Role, Session, WorkspaceContext } from '../auth/session'
 import { config } from '../config'
 import { query, queryOne } from '../db/pool'
+import { withTransaction } from '../db/transaction'
 import { HttpError } from '../http/errors'
 import { newId, newToken } from '../ids'
 import { sendEmail } from '../integrations/email'
-import { PLANS } from '../plans'
+import { PLANS, type PlanId } from '../plans'
 import { getWorkspace } from './workspaces'
 
 export type Member = {
@@ -93,4 +94,38 @@ export async function removeMember(ctx: WorkspaceContext, userId: string): Promi
     throw new HttpError(409, 'The owner cannot be removed')
   }
   await query('delete from members where workspace_id = $1 and user_id = $2', [ctx.workspaceId, userId])
+}
+
+export async function acceptInvite(session: Session, token: string): Promise<{ workspaceId: string }> {
+  return withTransaction(async (client) => {
+    const [invite] = await client.query<{ id: string; workspaceId: string; email: string; role: Role; acceptedAt: string | null }>(
+      `select id, workspace_id as "workspaceId", email, role, accepted_at as "acceptedAt"
+         from invites
+        where token = $1
+          for update`,
+      [token],
+    )
+    if (!invite || invite.acceptedAt) {
+      throw new HttpError(404, 'This invite is no longer valid')
+    }
+    if (invite.email !== session.email.toLowerCase()) {
+      throw new HttpError(403, 'This invite was sent to a different email address')
+    }
+    const [workspace] = await client.query<{ plan: PlanId }>('select plan from workspaces where id = $1 for update', [
+      invite.workspaceId,
+    ])
+    const [members] = await client.query<{ count: number }>(
+      'select count(*)::int as count from members where workspace_id = $1',
+      [invite.workspaceId],
+    )
+    if (members!.count > PLANS[workspace!.plan].seats) {
+      throw new HttpError(409, 'This workspace has no free seats')
+    }
+    await client.query(
+      'insert into members (workspace_id, user_id, role) values ($1, $2, $3) on conflict do nothing',
+      [invite.workspaceId, session.userId, invite.role],
+    )
+    await client.query('update invites set accepted_at = now() where id = $1', [invite.id])
+    return { workspaceId: invite.workspaceId }
+  })
 }

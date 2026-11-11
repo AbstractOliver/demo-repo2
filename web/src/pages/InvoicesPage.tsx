@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useParams } from 'react-router'
+import { Link, useParams } from 'react-router'
 import type { Invoice, InvoiceStatus } from '../api'
 import { Money } from '../components/Money'
 import { StatusBadge } from '../components/StatusBadge'
@@ -55,7 +55,9 @@ export function InvoicesPage() {
         <tbody>
           {(invoices ?? []).map((invoice) => (
             <tr key={invoice.id}>
-              <td className="mono">{invoice.number}</td>
+              <td className="mono">
+                <Link to={invoice.id}>{invoice.number}</Link>
+              </td>
               <td>{invoice.customerName}</td>
               <td>{invoice.dueDate}</td>
               <td>

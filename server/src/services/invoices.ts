@@ -11,6 +11,7 @@ export type Invoice = {
   id: string
   customerId: string
   customerName: string
+  cardLast4: string | null
   number: string
   amountCents: number
   currency: string
@@ -27,7 +28,8 @@ export type NewInvoice = {
 }
 
 const INVOICE_SELECT = `
-  select i.id, i.customer_id as "customerId", c.name as "customerName", i.number,
+  select i.id, i.customer_id as "customerId", c.name as "customerName",
+         c.card_last4 as "cardLast4", i.number,
          i.amount_cents as "amountCents", i.currency, i.status,
          to_char(i.due_date, 'YYYY-MM-DD') as "dueDate", i.created_at as "createdAt"
     from invoices i join customers c on c.id = i.customer_id`

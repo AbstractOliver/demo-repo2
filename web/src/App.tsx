@@ -1,5 +1,7 @@
 import { NavLink, Navigate, Outlet, Route, Routes, useParams } from 'react-router'
+import { AcceptInvitePage } from './pages/AcceptInvitePage'
 import { CustomersPage } from './pages/CustomersPage'
+import { InvoicePage } from './pages/InvoicePage'
 import { InvoicesPage } from './pages/InvoicesPage'
 import { MembersPage } from './pages/MembersPage'
 import { SignInPage } from './pages/SignInPage'
@@ -18,8 +20,10 @@ export function App() {
   const first = workspaces[0]
   return (
     <Routes>
+      <Route path="/invites/:token" element={<AcceptInvitePage />} />
       <Route path="/w/:workspaceId" element={<WorkspaceLayout />}>
         <Route path="invoices" element={<InvoicesPage />} />
+        <Route path="invoices/:invoiceId" element={<InvoicePage />} />
         <Route path="customers" element={<CustomersPage />} />
         <Route path="members" element={<MembersPage />} />
         <Route index element={<Navigate to="invoices" replace />} />

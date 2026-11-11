@@ -45,6 +45,8 @@ create table customers (
   workspace_id text not null references workspaces (id) on delete cascade,
   name text not null,
   email text not null,
+  card_payment_method_id text,
+  card_last4 text,
   created_at timestamptz not null default now()
 );
 
@@ -62,3 +64,13 @@ create table invoices (
 );
 
 create index invoices_workspace_status on invoices (workspace_id, status);
+
+create table payments (
+  id text primary key,
+  workspace_id text not null references workspaces (id) on delete cascade,
+  invoice_id text not null references invoices (id),
+  amount_cents integer not null,
+  currency text not null,
+  provider_charge_id text not null unique,
+  created_at timestamptz not null default now()
+);
