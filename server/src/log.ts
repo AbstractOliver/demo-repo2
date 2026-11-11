@@ -31,7 +31,11 @@ export function summarizeError(err: unknown): ErrorSummary {
     return { name: typeof err, frames: [] }
   }
   const code = (err as { code?: unknown }).code
-  const frames = (err.stack ?? '')
+  // A stack starts with "Name: message", and the message can span several lines. Keep only what follows
+  // it; when the stack doesn't start that way, keep no frames rather than risk keeping the message.
+  const header = String(err)
+  const stack = err.stack ?? ''
+  const frames = (stack.startsWith(header) ? stack.slice(header.length) : '')
     .split('\n')
     .map((line) => line.trim())
     .filter((line) => line.startsWith('at '))

@@ -14,8 +14,9 @@ export type ErrorReply = {
   body: { error: string; issues?: { path: string; message: string }[] }
 }
 
-// What a customer sees when a request fails. Only an HttpError's own message is shown. Any other error
-// becomes a plain 500, so a stack trace or a database message never reaches a response.
+// What a customer sees when a request fails: an HttpError's own message, or, for invalid input, which
+// fields failed and why. Any other error becomes a plain 500, so a stack trace or a database message
+// never reaches a response.
 export function toErrorReply(err: unknown): ErrorReply {
   if (err instanceof HttpError) {
     return { status: err.status, body: { error: err.message } }
