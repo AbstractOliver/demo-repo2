@@ -1,6 +1,7 @@
-import type { Request, Response } from 'express'
+import type { Request } from 'express'
 import { z } from 'zod'
 import { requireWorkspace } from '../auth/session'
+import type { Reply } from '../http/endpoint'
 import { createInvoice, getInvoice, isOverdue, listInvoices, sendInvoice } from '../services/invoices'
 
 const listQuery = z.object({ status: z.enum(['draft', 'open', 'paid', 'void']).optional() })
@@ -12,27 +13,26 @@ const newInvoiceBody = z.object({
   dueDate: z.string().date(),
 })
 
-export async function listInvoicesHandler(req: Request, res: Response) {
+export async function listInvoicesHandler(req: Request): Promise<Reply> {
   const ctx = await requireWorkspace(req)
   const { status } = listQuery.parse(req.query)
   const invoices = await listInvoices(ctx.workspaceId, status)
-  res.json(invoices.map((invoice) => ({ ...invoice, overdue: isOverdue(invoice) })))
+  return { body: invoices.map((invoice) => ({ ...invoice, overdue: isOverdue(invoice) })) }
 }
 
-export async function getInvoiceHandler(req: Request, res: Response) {
+export async function getInvoiceHandler(req: Request): Promise<Reply> {
   const ctx = await requireWorkspace(req)
   const invoice = await getInvoice(ctx.workspaceId, String(req.params.invoiceId))
-  res.json({ ...invoice, overdue: isOverdue(invoice) })
+  return { body: { ...invoice, overdue: isOverdue(invoice) } }
 }
 
-export async function createInvoiceHandler(req: Request, res: Response) {
+export async function createInvoiceHandler(req: Request): Promise<Reply> {
   const ctx = await requireWorkspace(req, 'admin')
   const invoice = await createInvoice(ctx.workspaceId, newInvoiceBody.parse(req.body))
-  res.status(201).json(invoice)
+  return { status: 201, body: invoice }
 }
 
-export async function sendInvoiceHandler(req: Request, res: Response) {
+export async function sendInvoiceHandler(req: Request): Promise<Reply> {
   const ctx = await requireWorkspace(req, 'admin')
-  const invoice = await sendInvoice(ctx.workspaceId, String(req.params.invoiceId))
-  res.json(invoice)
+  return { body: await sendInvoice(ctx.workspaceId, String(req.params.invoiceId)) }
 }

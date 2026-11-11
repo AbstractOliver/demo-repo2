@@ -1,5 +1,5 @@
 import express from 'express'
-import { handleErrors } from './http/errors'
+import { endpoint, handleErrors } from './http/endpoint'
 import { meHandler, signInHandler } from './routes/authRoutes'
 import { createCustomerHandler, listCustomersHandler } from './routes/customerRoutes'
 import {
@@ -15,22 +15,23 @@ export function createApp() {
   const app = express()
   app.use(express.json())
 
-  app.get('/api/health', (_req, res) => {
-    res.json({ ok: true })
-  })
-  app.post('/api/sign-in', signInHandler)
-  app.get('/api/me', meHandler)
+  app.get(
+    '/api/health',
+    endpoint(async () => ({ body: { ok: true } })),
+  )
+  app.post('/api/sign-in', endpoint(signInHandler))
+  app.get('/api/me', endpoint(meHandler))
 
-  app.get('/api/workspaces/:workspaceId', getWorkspaceHandler)
-  app.get('/api/workspaces/:workspaceId/customers', listCustomersHandler)
-  app.post('/api/workspaces/:workspaceId/customers', createCustomerHandler)
-  app.get('/api/workspaces/:workspaceId/invoices', listInvoicesHandler)
-  app.post('/api/workspaces/:workspaceId/invoices', createInvoiceHandler)
-  app.get('/api/workspaces/:workspaceId/invoices/:invoiceId', getInvoiceHandler)
-  app.post('/api/workspaces/:workspaceId/invoices/:invoiceId/send', sendInvoiceHandler)
-  app.get('/api/workspaces/:workspaceId/members', listMembersHandler)
-  app.post('/api/workspaces/:workspaceId/invites', inviteMemberHandler)
-  app.delete('/api/workspaces/:workspaceId/members/:userId', removeMemberHandler)
+  app.get('/api/workspaces/:workspaceId', endpoint(getWorkspaceHandler))
+  app.get('/api/workspaces/:workspaceId/customers', endpoint(listCustomersHandler))
+  app.post('/api/workspaces/:workspaceId/customers', endpoint(createCustomerHandler))
+  app.get('/api/workspaces/:workspaceId/invoices', endpoint(listInvoicesHandler))
+  app.post('/api/workspaces/:workspaceId/invoices', endpoint(createInvoiceHandler))
+  app.get('/api/workspaces/:workspaceId/invoices/:invoiceId', endpoint(getInvoiceHandler))
+  app.post('/api/workspaces/:workspaceId/invoices/:invoiceId/send', endpoint(sendInvoiceHandler))
+  app.get('/api/workspaces/:workspaceId/members', endpoint(listMembersHandler))
+  app.post('/api/workspaces/:workspaceId/invites', endpoint(inviteMemberHandler))
+  app.delete('/api/workspaces/:workspaceId/members/:userId', endpoint(removeMemberHandler))
 
   app.use(handleErrors)
   return app

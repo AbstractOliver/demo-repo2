@@ -1,12 +1,13 @@
-import type { Request, Response } from 'express'
+import type { Request } from 'express'
 import { requireWorkspace } from '../auth/session'
+import type { Reply } from '../http/endpoint'
 import { PLANS } from '../plans'
 import { getSeatUsage } from '../services/members'
 import { getWorkspace } from '../services/workspaces'
 
-export async function getWorkspaceHandler(req: Request, res: Response) {
+export async function getWorkspaceHandler(req: Request): Promise<Reply> {
   const ctx = await requireWorkspace(req)
   const workspace = await getWorkspace(ctx.workspaceId)
   const seats = await getSeatUsage(ctx.workspaceId)
-  res.json({ ...workspace, planDetails: PLANS[workspace.plan], seats, role: ctx.role })
+  return { body: { ...workspace, planDetails: PLANS[workspace.plan], seats, role: ctx.role } }
 }
